@@ -1,34 +1,75 @@
 [
   {
-    "image": "race_001.jpg",
+    "image": "clear_single_runner_bib.svg",
+    "category": "clear_single_runner_bib",
+    "description": "Synthetic approved test image with one front-facing runner and a large, unobstructed bib.",
+    "source": "synthetic",
+    "license": "project-approved synthetic test asset",
     "bibs": [
       {
         "bib_number": "1284",
-        "bbox": {
-          "x": 412,
-          "y": 288,
-          "width": 96,
-          "height": 44
-        }
+        "bbox": { "x": 348, "y": 224, "width": 108, "height": 58 }
       }
     ]
   },
   {
-    "image": "race_002.jpg",
+    "image": "multiple_runners_bibs.svg",
+    "category": "multiple_runners",
+    "description": "Synthetic approved test image containing three visible runner bibs.",
+    "source": "synthetic",
+    "license": "project-approved synthetic test asset",
     "bibs": [
-      {
-        "bib_number": "305",
-        "bbox": null
-      },
-      {
-        "bib_number": "4179",
-        "bbox": {
-          "x": 220,
-          "y": 334,
-          "width": 82,
-          "height": 38
-        }
-      }
+      { "bib_number": "305", "bbox": { "x": 195, "y": 227, "width": 88, "height": 48 } },
+      { "bib_number": "4179", "bbox": { "x": 438, "y": 208, "width": 92, "height": 50 } },
+      { "bib_number": "88", "bbox": { "x": 693, "y": 225, "width": 72, "height": 42 } }
     ]
+  },
+  {
+    "image": "small_distant_bib.svg",
+    "category": "small_distant_bib",
+    "description": "Synthetic approved test image with a small, distant bib to exercise low-resolution OCR cases.",
+    "source": "synthetic",
+    "license": "project-approved synthetic test asset",
+    "bibs": [
+      { "bib_number": "7421", "bbox": { "x": 567, "y": 269, "width": 35, "height": 17 } }
+    ]
+  },
+  {
+    "image": "partial_occlusion_bib.svg",
+    "category": "partial_occlusion",
+    "description": "Synthetic approved test image with an arm crossing part of the bib region.",
+    "source": "synthetic",
+    "license": "project-approved synthetic test asset",
+    "bibs": [
+      { "bib_number": "619", "bbox": { "x": 361, "y": 225, "width": 108, "height": 56 } }
+    ]
+  },
+  {
+    "image": "motion_blur_bib.svg",
+    "category": "motion_blur",
+    "description": "Synthetic approved test image with horizontal blur applied to runner and bib.",
+    "source": "synthetic",
+    "license": "project-approved synthetic test asset",
+    "bibs": [
+      { "bib_number": "9027", "bbox": { "x": 418, "y": 238, "width": 90, "height": 50 } }
+    ]
+  },
+  {
+    "image": "glare_shadows_bib.svg",
+    "category": "glare_or_shadows",
+    "description": "Synthetic approved test image with shadow and glare overlays across the bib.",
+    "source": "synthetic",
+    "license": "project-approved synthetic test asset",
+    "bibs": [
+      { "bib_number": "5602", "bbox": { "x": 365, "y": 226, "width": 110, "height": 56 } }
+    ]
+  },
+  {
+    "image": "negative_no_bib.svg",
+    "category": "negative_control",
+    "description": "Synthetic approved negative-control image with runners and non-bib text but no bib numbers.",
+    "source": "synthetic",
+    "license": "project-approved synthetic test asset",
+    "bibs": []
   }
 ]
