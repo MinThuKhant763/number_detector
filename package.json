@@ -5,6 +5,11 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
+    "start": "python -m api.start",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:web": "vite --host 0.0.0.0",
+    "dev:api": "uvicorn api.main:app --host 0.0.0.0 --port 3001 --reload",
+    "start:api": "python -m api.start",
     "start": "uvicorn api.main:app --host 0.0.0.0 --port 3001",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "dev:web": "vite --host 0.0.0.0",

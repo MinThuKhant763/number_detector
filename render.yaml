@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: number-detector-api
+    env: docker
+    dockerfilePath: ./Dockerfile.api
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: YOLO_BIB_CONFIDENCE
+        value: "0.35"
+      # Set this in the Render dashboard when you have uploaded a trained model.
+      # - key: YOLO_BIB_MODEL_PATH
+      #   value: /app/models/bib-detector.pt

@@ -21,6 +21,7 @@ export function ResultsPanel({ detections, disabled, isDetecting, onDetect }) {
                 <div>
                   <dt>Status</dt>
                   <dd>{detection.status ?? 'accepted'}</dd>
+                </div>
                   <dt>AI confidence</dt>
                   <dd>{detection.aiConfidence == null ? 'N/A' : `${Math.round(detection.aiConfidence * 100)}%`}</dd>
                 </div>
