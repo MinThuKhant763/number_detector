@@ -117,3 +117,58 @@ def test_results_do_not_merge_separate_text_boxes():
 
     assert 12345 not in _numbers(results)
     assert set(_numbers(results)) == {12, 345}
+def test_recognize_bib_selects_highest_confidence_valid_variant(monkeypatch):
+    import importlib
+
+    recognize_module = importlib.import_module("api.ocr.recognize_bib")
+
+    variants = [object(), object(), object()]
+    responses = {
+        id(variants[0]): {
+            "text": ["777"],
+            "conf": ["95"],
+            "left": [1],
+            "top": [2],
+            "width": [3],
+            "height": [4],
+        },
+        id(variants[1]): {
+            "text": ["100000"],
+            "conf": ["99"],
+            "left": [5],
+            "top": [6],
+            "width": [7],
+            "height": [8],
+        },
+        id(variants[2]): {
+            "text": ["1234"],
+            "conf": ["82"],
+            "left": [9],
+            "top": [10],
+            "width": [11],
+            "height": [12],
+        },
+    }
+
+    class FakeOutput:
+        DICT = "dict"
+
+    class FakePytesseract:
+        Output = FakeOutput
+
+        @staticmethod
+        def image_to_data(image, *, config, output_type):
+            assert config == "--psm 7 -c tessedit_char_whitelist=0123456789"
+            assert output_type == FakeOutput.DICT
+            return responses[id(image)]
+
+    monkeypatch.setattr(recognize_module, "_preprocess_variants", lambda image: variants)
+    monkeypatch.setattr(
+        recognize_module.importlib,
+        "import_module",
+        lambda name: FakePytesseract if name == "pytesseract" else None,
+    )
+
+    assert recognize_module.recognize_bib("image", max_number=99999) == BibOcrResult(
+        "777", 777, 0.95, (1, 2, 3, 4)
+    )
