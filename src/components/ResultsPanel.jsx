@@ -1,3 +1,12 @@
+function formatPercent(value) {
+  return `${Number(value ?? 0).toFixed(1)}%`;
+}
+
+function formatPixels(box) {
+  if (!box) return 'N/A';
+  return `x ${box.x}, y ${box.y}, w ${box.width}, h ${box.height}`;
+}
+
 export function ResultsPanel({ detections, disabled, isDetecting, onDetect }) {
   return (
     <aside className="panel results-panel">
@@ -22,15 +31,20 @@ export function ResultsPanel({ detections, disabled, isDetecting, onDetect }) {
                   <dt>Status</dt>
                   <dd>{detection.status ?? 'accepted'}</dd>
                 </div>
+                <div>
                   <dt>AI confidence</dt>
                   <dd>{detection.aiConfidence == null ? 'N/A' : `${Math.round(detection.aiConfidence * 100)}%`}</dd>
                 </div>
                 <div>
-                  <dt>Bounding box</dt>
+                  <dt>Overlay box</dt>
                   <dd>
-                    x {detection.boundingBox.x}%, y {detection.boundingBox.y}%, w{' '}
-                    {detection.boundingBox.width}%, h {detection.boundingBox.height}%
+                    x {formatPercent(detection.boundingBox.x)}, y {formatPercent(detection.boundingBox.y)}, w{' '}
+                    {formatPercent(detection.boundingBox.width)}, h {formatPercent(detection.boundingBox.height)}
                   </dd>
+                </div>
+                <div>
+                  <dt>Pixel box</dt>
+                  <dd>{formatPixels(detection.pixelBoundingBox)}</dd>
                 </div>
                 {detection.digitScores?.length > 0 && (
                   <div>
