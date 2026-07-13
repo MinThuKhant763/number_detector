@@ -69,6 +69,18 @@ class BibDetection:
     ) -> "BibDetection":
         return cls(BoundingBox(x, y, width, height), confidence, crop)
 
+    @classmethod
+    def from_bbox_values(
+        cls,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        confidence: float,
+        crop: Any | None = None,
+    ) -> "BibDetection":
+        return cls(BoundingBox(x, y, width, height), confidence, crop)
+
     def as_dict(self, *, include_crop: bool = False) -> dict[str, Any]:
     def as_dict(self, *, include_crop: bool = False, include_debug: bool = False) -> dict[str, Any]:
         payload: dict[str, Any] = {

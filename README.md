@@ -298,6 +298,16 @@ Build and run locally:
 
 ```bash
 docker build -f Dockerfile.api -t number-detector-api .
+docker run --rm -p 3001:3001 --env-file .env.example number-detector-api
+curl http://localhost:3001/api/health
+```
+
+Or use Compose:
+
+```bash
+docker compose -f docker-compose.api.yml up --build
+```
+
 docker run --rm -p 3001:3001 number-detector-api
 curl http://localhost:3001/api/health
 ```
@@ -316,3 +326,15 @@ The entrypoint reads these environment variables:
 - `YOLO_BIB_CONFIDENCE`: optional YOLO confidence threshold, default `0.35`.
 
 For Render, `render.yaml` defines a Docker web service using `Dockerfile.api` and `/api/health` as the health check. After deployment, set the frontend environment variable `VITE_API_BASE_URL` to the deployed backend URL so browser uploads call the FastAPI service.
+
+
+### Deployment checklist
+
+1. Train or upload YOLO weights if you want model-backed detection; otherwise leave `YOLO_BIB_MODEL_PATH` unset for the OpenCV fallback.
+2. Copy `.env.example` to your platform environment variables and set `PORT`, `YOLO_BIB_CONFIDENCE`, and optionally `YOLO_BIB_MODEL_PATH`.
+3. Deploy `Dockerfile.api` as the backend web service.
+4. Confirm the service health check returns `{"status":"ok"}` at `/api/health`.
+5. Set the frontend `VITE_API_BASE_URL` to the deployed backend origin, for example `https://number-detector-api.example.com`.
+6. Upload a test image through the frontend or call `POST /api/detect` with a multipart field named `image`.
+
+GitHub Actions now includes a backend workflow that runs Python tests and builds the backend Docker image on pull requests.
