@@ -258,3 +258,43 @@ The current backend returns deterministic placeholder detections so the full-sta
 3. Replace `rankDetections` with domain-specific validation or an AI model that resolves ambiguous OCR output.
 
 Keep each integration behind the same function signatures to avoid changing API routes or frontend code.
+
+## FastAPI + YOLO backend
+
+The Python backend exposes the same `POST /api/detect` contract as the original Express prototype, but is designed for model-backed race-bib detection:
+
+```bash
+pip install -r requirements.txt
+uvicorn api.main:app --host 0.0.0.0 --port 3001 --reload
+```
+
+Set `YOLO_BIB_MODEL_PATH=/path/to/bib-detector.pt` to use a fine-tuned YOLO model for bib localization. If no model path is configured, the API falls back to the OpenCV candidate detector in `api/detection/bib_detector.py`.
+
+Detection output is four-digit focused. The API only accepts OCR candidates with exactly four digits. When one or more digits are below the clarity threshold, the response returns `bibNumber: null`, a masked `displayNumber` such as `12?4`, and `digitScores` so the UI can show confidence for each digit instead of pretending the full number is clear.
+
+## Deploying the FastAPI backend
+
+This repository includes a backend-only Docker deployment target. The image installs the Python API dependencies plus the system Tesseract binary required by `pytesseract`.
+
+Build and run locally:
+
+```bash
+docker build -f Dockerfile.api -t number-detector-api .
+docker run --rm -p 3001:3001 number-detector-api
+curl http://localhost:3001/api/health
+```
+
+Cloud platforms should run the API with:
+
+```bash
+python -m api.start
+```
+
+The entrypoint reads these environment variables:
+
+- `PORT`: port provided by the host, default `3001`.
+- `HOST`: bind host, default `0.0.0.0`.
+- `YOLO_BIB_MODEL_PATH`: optional path to a trained YOLO `.pt` model. If omitted, OpenCV fallback detection is used.
+- `YOLO_BIB_CONFIDENCE`: optional YOLO confidence threshold, default `0.35`.
+
+For Render, `render.yaml` defines a Docker web service using `Dockerfile.api` and `/api/health` as the health check. After deployment, set the frontend environment variable `VITE_API_BASE_URL` to the deployed backend URL so browser uploads call the FastAPI service.
