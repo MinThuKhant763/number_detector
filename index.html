@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Race Bib Review</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Number Detector</p>
+          <h1 id="page-title">Frontend review interface</h1>
+          <p class="hero-copy">
+            Upload a race photo, review detected bib numbers, inspect OCR and AI confidence,
+            and correct any results before exporting them to the scoring workflow.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel upload-panel" aria-labelledby="upload-title">
+        <div>
+          <h2 id="upload-title">Upload race image</h2>
+          <p>Choose a JPG, PNG, or WebP image. Detection runs automatically after upload.</p>
+        </div>
+        <label class="drop-zone" for="race-image-input">
+          <span class="drop-zone__icon" aria-hidden="true">⬆</span>
+          <span class="drop-zone__title">Select a race image</span>
+          <span class="drop-zone__hint">or drag it here from your desktop</span>
+          <input id="race-image-input" type="file" accept="image/png,image/jpeg,image/webp" />
+        </label>
+      </section>
+
+      <section id="status" class="status status--empty" role="status" aria-live="polite">
+        Upload an image to begin bib detection.
+      </section>
+
+      <section class="review-grid" aria-label="Detection review workspace">
+        <article class="panel image-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Image review</h2>
+              <p id="image-help">Detected bibs are highlighted with numbered boxes.</p>
+            </div>
+            <span id="detection-count" class="badge">0 detections</span>
+          </div>
+          <div id="image-stage" class="image-stage image-stage--empty">
+            <p>No image selected.</p>
+          </div>
+        </article>
+
+        <article class="panel results-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Detection results</h2>
+              <p>Use the correction field to fix inaccurate numbers.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Detected number</th>
+                  <th scope="col">OCR confidence</th>
+                  <th scope="col">AI confidence</th>
+                  <th scope="col">Crop preview</th>
+                  <th scope="col">Correction</th>
+                </tr>
+              </thead>
+              <tbody id="results-body">
+                <tr class="empty-row">
+                  <td colspan="5">No detections to review yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
