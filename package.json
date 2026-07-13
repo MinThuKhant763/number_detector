@@ -18,11 +18,15 @@
     "concurrently": "latest",
     "cors": "latest",
     "express": "latest",
+    "jpeg-js": "^0.4.4",
     "multer": "latest",
     "react": "latest",
     "react-dom": "latest",
     "sharp": "^0.35.3",
     "tesseract.js": "^7.0.0",
+    "pngjs": "^7.0.0",
+    "react": "latest",
+    "react-dom": "latest",
     "vite": "latest"
   },
   "devDependencies": {
