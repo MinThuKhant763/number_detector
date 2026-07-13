@@ -19,13 +19,15 @@
     "cors": "latest",
     "express": "latest",
     "multer": "latest",
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "sharp": "^0.35.3",
+    "tesseract.js": "^7.0.0",
+    "vite": "latest"
   },
   "devDependencies": {
-    "eslint": "latest",
     "@eslint/js": "latest",
+    "eslint": "latest",
     "globals": "latest"
   }
 }
