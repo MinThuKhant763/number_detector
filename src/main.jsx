@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ImageUploader } from './components/ImageUploader.jsx';
 import { ImagePreview } from './components/ImagePreview.jsx';
