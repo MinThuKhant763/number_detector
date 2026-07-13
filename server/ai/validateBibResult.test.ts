@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildBibValidationPrompt, validateBibResult, type BibVisionModel } from './validateBibResult';
+import { buildBibValidationPrompt, validateBibResult, type BibVisionModel } from './validateBibResult.ts';
 
 async function run(): Promise<void> {
   const acceptedModel: BibVisionModel = {
