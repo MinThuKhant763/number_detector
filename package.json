@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "start": "node server/index.js",
+    "start": "uvicorn api.main:app --host 0.0.0.0 --port 3001",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "dev:web": "vite --host 0.0.0.0",
-    "dev:api": "node --watch server/index.js",
+    "dev:api": "uvicorn api.main:app --host 0.0.0.0 --port 3001 --reload",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "eslint .",

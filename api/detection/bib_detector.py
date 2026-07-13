@@ -45,6 +45,19 @@ class BibDetection:
     crop: Any | None = None
     debug_scores: dict[str, float] = field(default_factory=dict)
 
+    @classmethod
+    def from_bbox_values(
+        cls,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        confidence: float,
+        crop: Any | None = None,
+    ) -> "BibDetection":
+        return cls(BoundingBox(x, y, width, height), confidence, crop)
+
+    def as_dict(self, *, include_crop: bool = False) -> dict[str, Any]:
     def as_dict(self, *, include_crop: bool = False, include_debug: bool = False) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "bbox": self.bbox.as_dict(),
@@ -135,6 +148,17 @@ def detect_bib_regions_from_image(
 
         confidence = _score_candidate(aspect_ratio=aspect_ratio, extent=extent, area_ratio=area / image_area)
         candidate_regions.append((contour, (x, y, w, h), confidence))
+
+    candidate_regions.sort(key=lambda item: item[2], reverse=True)
+    deduped_regions = _dedupe_overlapping_regions(candidate_regions)[:max_candidates]
+
+    detections: list[BibDetection] = []
+    for contour, rect, confidence in deduped_regions:
+        x, y, w, h = rect
+        crop = _crop_and_normalize(image, contour, rect)
+        detections.append(BibDetection(BoundingBox(x, y, w, h), confidence, crop))
+
+    return detections
 
     candidate_regions.sort(key=lambda item: item[2], reverse=True)
     deduped_regions = _dedupe_overlapping_regions(candidate_regions)[:max_candidates]

@@ -12,13 +12,15 @@ export function ResultsPanel({ detections, disabled, isDetecting, onDetect }) {
         <ul className="result-list">
           {detections.map((detection) => (
             <li key={detection.id}>
-              <strong>#{detection.bibNumber}</strong>
+              <strong>#{detection.bibNumber ?? detection.displayNumber ?? '????'}</strong>
               <dl>
                 <div>
                   <dt>OCR confidence</dt>
-                  <dd>{Math.round(detection.ocrConfidence * 100)}%</dd>
+                  <dd>{Math.round((detection.ocrConfidence ?? detection.confidence ?? 0) * 100)}%</dd>
                 </div>
                 <div>
+                  <dt>Status</dt>
+                  <dd>{detection.status ?? 'accepted'}</dd>
                   <dt>AI confidence</dt>
                   <dd>{detection.aiConfidence == null ? 'N/A' : `${Math.round(detection.aiConfidence * 100)}%`}</dd>
                 </div>
@@ -29,6 +31,16 @@ export function ResultsPanel({ detections, disabled, isDetecting, onDetect }) {
                     {detection.boundingBox.width}%, h {detection.boundingBox.height}%
                   </dd>
                 </div>
+                {detection.digitScores?.length > 0 && (
+                  <div>
+                    <dt>Digit scores</dt>
+                    <dd>
+                      {detection.digitScores
+                        .map((digit) => `${digit.value ?? '?'}:${Math.round(digit.score * 100)}%`)
+                        .join(' ')}
+                    </dd>
+                  </div>
+                )}
               </dl>
             </li>
           ))}
