@@ -8,9 +8,8 @@ frontend overlays.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from functools import cache
 from dataclasses import dataclass, field
+from functools import cache
 import importlib.util
 from pathlib import Path
 from typing import Any, Iterable
@@ -54,34 +53,10 @@ class BibDetection:
         height: int,
         confidence: float,
         crop: Any | None = None,
+        debug_scores: dict[str, float] | None = None,
     ) -> "BibDetection":
-        return cls(BoundingBox(x, y, width, height), confidence, crop)
+        return cls(BoundingBox(x, y, width, height), confidence, crop, debug_scores or {})
 
-    @classmethod
-    def from_bbox_values(
-        cls,
-        x: int,
-        y: int,
-        width: int,
-        height: int,
-        confidence: float,
-        crop: Any | None = None,
-    ) -> "BibDetection":
-        return cls(BoundingBox(x, y, width, height), confidence, crop)
-
-    @classmethod
-    def from_bbox_values(
-        cls,
-        x: int,
-        y: int,
-        width: int,
-        height: int,
-        confidence: float,
-        crop: Any | None = None,
-    ) -> "BibDetection":
-        return cls(BoundingBox(x, y, width, height), confidence, crop)
-
-    def as_dict(self, *, include_crop: bool = False) -> dict[str, Any]:
     def as_dict(self, *, include_crop: bool = False, include_debug: bool = False) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "bbox": self.bbox.as_dict(),
@@ -152,9 +127,8 @@ def detect_bib_regions_from_image(
     mask = _build_bib_candidate_mask(image)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Crop normalization is the most expensive per-contour operation. Score and
-    # de-duplicate candidates first so only the best final regions are warped,
-    # sharpened, and resized for OCR.
+    # Crop normalization is the most expensive per-contour operation. Do a cheap
+    # geometry pass first, then crop and score only the highest-ranked regions.
     candidate_regions: list[tuple[Any, tuple[int, int, int, int], float]] = []
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
@@ -170,34 +144,28 @@ def detect_bib_regions_from_image(
         if extent < 0.35:
             continue
 
-        confidence = _score_candidate(aspect_ratio=aspect_ratio, extent=extent, area_ratio=area / image_area)
-        candidate_regions.append((contour, (x, y, w, h), confidence))
+        geometry_confidence, _ = _score_candidate(
+            aspect_ratio=aspect_ratio,
+            extent=extent,
+            area_ratio=area / image_area,
+        )
+        candidate_regions.append((contour, (x, y, w, h), geometry_confidence))
 
     candidate_regions.sort(key=lambda item: item[2], reverse=True)
     deduped_regions = _dedupe_overlapping_regions(candidate_regions)[:max_candidates]
 
     detections: list[BibDetection] = []
-    for contour, rect, confidence in deduped_regions:
+    for contour, rect, _geometry_confidence in deduped_regions:
         x, y, w, h = rect
+        area_ratio = float(w * h) / image_area
+        aspect_ratio = w / max(h, 1)
+        extent = cv2.contourArea(contour) / max(float(w * h), 1.0)
         crop = _crop_and_normalize(image, contour, rect)
-        detections.append(BibDetection(BoundingBox(x, y, w, h), confidence, crop))
-
-    return detections
-
-    candidate_regions.sort(key=lambda item: item[2], reverse=True)
-    deduped_regions = _dedupe_overlapping_regions(candidate_regions)[:max_candidates]
-
-    detections: list[BibDetection] = []
-    for contour, rect, confidence in deduped_regions:
-        x, y, w, h = rect
-        crop = _crop_and_normalize(image, contour, rect)
-        detections.append(BibDetection(BoundingBox(x, y, w, h), confidence, crop))
-        crop = _crop_and_normalize(image, contour, (x, y, w, h))
         ocr_confidence = _preliminary_ocr_confidence(crop) if enable_preliminary_ocr else None
         confidence, debug_scores = _score_candidate(
             aspect_ratio=aspect_ratio,
             extent=extent,
-            area_ratio=area / image_area,
+            area_ratio=area_ratio,
             crop=crop,
             ocr_confidence=ocr_confidence,
         )
@@ -210,6 +178,7 @@ def detect_bib_regions_from_image(
             )
         )
 
+    detections.sort(key=lambda detection: detection.confidence, reverse=True)
     return detections
 
 

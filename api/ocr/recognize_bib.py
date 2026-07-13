@@ -125,10 +125,6 @@ def preprocess_bib_image(image: Any, *, scale: int = 2) -> Any:
         (width * scale, height * scale),
         interpolation=cv2.INTER_CUBIC,
     )
-    gray = _to_grayscale(cv2, source)
-    denoised = _denoise(cv2, gray)
-    thresholded = _otsu_threshold(cv2, denoised)
-    return _scale_image(cv2, thresholded, scale=scale)
 
 
 def recognize_bib(
@@ -149,14 +145,6 @@ def recognize_bib(
 
     pytesseract = importlib.import_module("pytesseract")
     config = tesseract_config or "--psm 7 -c tessedit_char_whitelist=0123456789"
-    data = pytesseract.image_to_data(
-        prepared_image,
-        config=config,
-        output_type=pytesseract.Output.DICT,
-    )
-    candidates = _results_from_tesseract_data(
-        data, bbox=bbox, min_number=min_number, max_number=max_number
-    )
     candidates: list[BibOcrResult] = []
 
     for prepared_image in _preprocess_variants(image):
@@ -165,7 +153,11 @@ def recognize_bib(
             config=config,
             output_type=pytesseract.Output.DICT,
         )
-        candidates.extend(_results_from_tesseract_data(data, bbox=bbox))
+        candidates.extend(
+            _results_from_tesseract_data(
+                data, bbox=bbox, min_number=min_number, max_number=max_number
+            )
+        )
 
     valid = [
         result
@@ -180,7 +172,14 @@ def recognize_bib(
     if not valid:
         return None
 
-    return max(valid, key=_candidate_rank)
+    return max(
+        valid,
+        key=lambda result: (
+            result.confidence,
+            len(str(result.normalizedNumber or 0)),
+            result.normalizedNumber or 0,
+        ),
+    )
 
 
 def _preprocess_variants(image: Any, *, scale: int = 2) -> Iterable[Any]:
