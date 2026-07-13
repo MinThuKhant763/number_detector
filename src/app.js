@@ -1,4 +1,5 @@
-import { detectBibs, formatConfidence, validateRaceImage } from './detector.js';
+import { detectBibNumbers, validateRaceImage } from './lib/api.js';
+import { formatConfidence } from './detector.js';
 
 const input = document.querySelector('#race-image-input');
 const status = document.querySelector('#status');
@@ -42,7 +43,7 @@ async function handleUpload(file) {
   renderLoading(imageUrl);
 
   try {
-    const detections = await detectBibs(file);
+    const { detections } = await detectBibNumbers(file);
     renderImage(imageUrl, detections);
     renderResults(detections);
     if (detections.length === 0) {
@@ -66,9 +67,9 @@ function renderLoading(src) {
 function renderImage(src, detections) {
   detectionCount.textContent = `${detections.length} detection${detections.length === 1 ? '' : 's'}`;
   stage.className = detections.length ? 'image-stage' : 'image-stage image-stage--empty-detections';
-  const boxes = detections.map((detection, index) => `
-    <div class="bbox" style="left:${detection.box.x}%;top:${detection.box.y}%;width:${detection.box.width}%;height:${detection.box.height}%">
-      <span>${index + 1}</span>
+  const boxes = detections.map((detection) => `
+    <div class="bbox" style="left:${detection.boundingBox.x}%;top:${detection.boundingBox.y}%;width:${detection.boundingBox.width}%;height:${detection.boundingBox.height}%">
+      <span>${detection.bibNumber}</span>
     </div>
   `).join('');
   stage.innerHTML = `<img src="${src}" alt="Uploaded race with detected bib boxes" />${boxes}`;
@@ -82,17 +83,17 @@ function renderResults(detections) {
 
   resultsBody.innerHTML = detections.map((detection) => `
     <tr>
-      <td><strong>${detection.number}</strong></td>
+      <td><strong>${detection.bibNumber}</strong></td>
       <td>${formatConfidence(detection.ocrConfidence)}</td>
       <td>${formatConfidence(detection.aiConfidence)}</td>
       <td>
         <div class="crop-preview" style="background-image:url('${imageUrl}')">
-          <span>${detection.number}</span>
+          <span>${detection.bibNumber}</span>
         </div>
       </td>
       <td>
-        <label class="sr-only" for="correction-${detection.id}">Correct ${detection.number}</label>
-        <input id="correction-${detection.id}" class="correction-input" value="${detection.correctedNumber}" inputmode="numeric" />
+        <label class="sr-only" for="correction-${detection.id}">Correct ${detection.bibNumber}</label>
+        <input id="correction-${detection.id}" class="correction-input" value="${detection.bibNumber}" inputmode="numeric" />
       </td>
     </tr>
   `).join('');
