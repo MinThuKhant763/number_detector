@@ -20,7 +20,14 @@ export function ResultsPanel({ detections, disabled, isDetecting, onDetect }) {
                 </div>
                 <div>
                   <dt>AI confidence</dt>
-                  <dd>{Math.round(detection.aiConfidence * 100)}%</dd>
+                  <dd>{detection.aiConfidence == null ? 'N/A' : `${Math.round(detection.aiConfidence * 100)}%`}</dd>
+                </div>
+                <div>
+                  <dt>Bounding box</dt>
+                  <dd>
+                    x {detection.boundingBox.x}%, y {detection.boundingBox.y}%, w{' '}
+                    {detection.boundingBox.width}%, h {detection.boundingBox.height}%
+                  </dd>
                 </div>
               </dl>
             </li>
