@@ -10,8 +10,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cache
+from dataclasses import dataclass, field
+import importlib.util
 from pathlib import Path
 from typing import Any, Iterable
+
+from api.ocr.recognize_bib import recognize_bib
 
 
 @dataclass(frozen=True)
@@ -39,6 +43,19 @@ class BibDetection:
     bbox: BoundingBox
     confidence: float
     crop: Any | None = None
+    debug_scores: dict[str, float] = field(default_factory=dict)
+
+    @classmethod
+    def from_bbox_values(
+        cls,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        confidence: float,
+        crop: Any | None = None,
+    ) -> "BibDetection":
+        return cls(BoundingBox(x, y, width, height), confidence, crop)
 
     @classmethod
     def from_bbox_values(
@@ -53,12 +70,17 @@ class BibDetection:
         return cls(BoundingBox(x, y, width, height), confidence, crop)
 
     def as_dict(self, *, include_crop: bool = False) -> dict[str, Any]:
+    def as_dict(self, *, include_crop: bool = False, include_debug: bool = False) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "bbox": self.bbox.as_dict(),
             "confidence": round(self.confidence, 4),
         }
         if include_crop:
             payload["crop"] = self.crop
+        if include_debug:
+            payload["debugScores"] = {
+                name: round(value, 4) for name, value in self.debug_scores.items()
+            }
         return payload
 
 
@@ -68,6 +90,8 @@ def detect_bib_regions(
     min_area_ratio: float = 0.002,
     max_area_ratio: float = 0.35,
     max_candidates: int = 8,
+    debug: bool = False,
+    enable_preliminary_ocr: bool = False,
 ) -> list[BibDetection]:
     """Detect candidate bib regions and return normalized crops.
 
@@ -93,6 +117,8 @@ def detect_bib_regions(
         min_area_ratio=min_area_ratio,
         max_area_ratio=max_area_ratio,
         max_candidates=max_candidates,
+        debug=debug,
+        enable_preliminary_ocr=enable_preliminary_ocr,
     )
 
 
@@ -102,6 +128,8 @@ def detect_bib_regions_from_image(
     min_area_ratio: float = 0.002,
     max_area_ratio: float = 0.35,
     max_candidates: int = 8,
+    debug: bool = False,
+    enable_preliminary_ocr: bool = False,
 ) -> list[BibDetection]:
     """Detect bib candidates in an OpenCV BGR image array."""
 
@@ -144,11 +172,44 @@ def detect_bib_regions_from_image(
 
     return detections
 
+    candidate_regions.sort(key=lambda item: item[2], reverse=True)
+    deduped_regions = _dedupe_overlapping_regions(candidate_regions)[:max_candidates]
 
-def detections_for_response(detections: Iterable[BibDetection]) -> list[dict[str, Any]]:
+    detections: list[BibDetection] = []
+    for contour, rect, confidence in deduped_regions:
+        x, y, w, h = rect
+        crop = _crop_and_normalize(image, contour, rect)
+        detections.append(BibDetection(BoundingBox(x, y, w, h), confidence, crop))
+        crop = _crop_and_normalize(image, contour, (x, y, w, h))
+        ocr_confidence = _preliminary_ocr_confidence(crop) if enable_preliminary_ocr else None
+        confidence, debug_scores = _score_candidate(
+            aspect_ratio=aspect_ratio,
+            extent=extent,
+            area_ratio=area / image_area,
+            crop=crop,
+            ocr_confidence=ocr_confidence,
+        )
+        detections.append(
+            BibDetection(
+                BoundingBox(x, y, w, h),
+                confidence,
+                crop,
+                debug_scores if debug else {},
+            )
+        )
+
+    return detections
+
+
+def detections_for_response(
+    detections: Iterable[BibDetection], *, include_debug: bool = False
+) -> list[dict[str, Any]]:
     """Serialize detections for an API response consumed by the frontend."""
 
-    return [detection.as_dict(include_crop=False) for detection in detections]
+    return [
+        detection.as_dict(include_crop=False, include_debug=include_debug)
+        for detection in detections
+    ]
 
 
 def _build_bib_candidate_mask(image: Any) -> Any:
@@ -235,10 +296,121 @@ def _sharpen_kernel() -> Any:
     return np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
 
 
-def _score_candidate(*, aspect_ratio: float, extent: float, area_ratio: float) -> float:
+def _score_candidate(
+    *,
+    aspect_ratio: float,
+    extent: float,
+    area_ratio: float,
+    crop: Any | None = None,
+    ocr_confidence: float | None = None,
+) -> tuple[float, dict[str, float]]:
     aspect_score = max(0.0, 1.0 - abs(aspect_ratio - 2.2) / 2.6)
     area_score = max(0.0, 1.0 - abs(area_ratio - 0.06) / 0.18)
-    return min(1.0, (aspect_score * 0.45) + (extent * 0.35) + (area_score * 0.20))
+    extent_score = min(max(extent, 0.0), 1.0)
+
+    visual_scores = _score_crop_visual_signals(crop) if crop is not None else {}
+    ocr_score = min(max(ocr_confidence or 0.0, 0.0), 1.0)
+
+    scores = {
+        "aspect": aspect_score,
+        "extent": extent_score,
+        "area": area_score,
+        "darkOnLightContrast": visual_scores.get("darkOnLightContrast", 0.0),
+        "componentDensity": visual_scores.get("componentDensity", 0.0),
+        "horizontalDigitBandOccupancy": visual_scores.get("horizontalDigitBandOccupancy", 0.0),
+        "centralEdgeDensity": visual_scores.get("centralEdgeDensity", 0.0),
+        "preliminaryOcrConfidence": ocr_score,
+    }
+
+    confidence = (
+        (scores["aspect"] * 0.22)
+        + (scores["extent"] * 0.16)
+        + (scores["area"] * 0.10)
+        + (scores["darkOnLightContrast"] * 0.16)
+        + (scores["componentDensity"] * 0.13)
+        + (scores["horizontalDigitBandOccupancy"] * 0.11)
+        + (scores["centralEdgeDensity"] * 0.08)
+        + (scores["preliminaryOcrConfidence"] * 0.04)
+    )
+    scores["combined"] = min(1.0, confidence)
+    return scores["combined"], scores
+
+
+def _score_crop_visual_signals(crop: Any) -> dict[str, float]:
+    """Score visual characteristics that distinguish race bibs from other rectangles."""
+
+    cv2 = _require_cv2()
+    np = _require_numpy()
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if len(crop.shape) == 3 else crop
+    if gray.size == 0:
+        return {}
+
+    height, width = gray.shape[:2]
+    threshold = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    dark = threshold == 0
+    dark_ratio = float(np.count_nonzero(dark)) / float(gray.size)
+    light_pixels = gray[~dark]
+    dark_pixels = gray[dark]
+    contrast = (
+        (float(light_pixels.mean()) - float(dark_pixels.mean())) / 255.0
+        if light_pixels.size and dark_pixels.size
+        else 0.0
+    )
+    background_lightness = float(light_pixels.mean()) / 255.0 if light_pixels.size else 0.0
+    dark_fraction_score = _triangular_score(dark_ratio, target=0.22, tolerance=0.22)
+    contrast_score = min(1.0, max(0.0, contrast / 0.55))
+    lightness_score = min(1.0, max(0.0, (background_lightness - 0.45) / 0.45))
+    dark_on_light_score = (contrast_score * 0.55) + (lightness_score * 0.25) + (dark_fraction_score * 0.20)
+
+    num_labels, _labels, stats, _ = cv2.connectedComponentsWithStats(dark.astype("uint8"), 8)
+    digit_like = 0
+    min_component_area = max(8, int(gray.size * 0.0008))
+    max_component_area = max(min_component_area + 1, int(gray.size * 0.18))
+    for label in range(1, num_labels):
+        _x, _y, w, h, area = (int(value) for value in stats[label])
+        if not min_component_area <= area <= max_component_area:
+            continue
+        component_aspect = w / max(h, 1)
+        if 0.15 <= component_aspect <= 1.25 and h >= height * 0.18:
+            digit_like += 1
+    component_density_score = _triangular_score(digit_like, target=4, tolerance=4)
+
+    y0, y1 = int(height * 0.20), max(int(height * 0.80), int(height * 0.20) + 1)
+    central_band = dark[y0:y1, :]
+    band_dark_ratio = float(np.count_nonzero(central_band)) / max(float(central_band.size), 1.0)
+    occupied_columns = np.count_nonzero(central_band.sum(axis=0) > max(1, central_band.shape[0] * 0.05))
+    column_occupancy = float(occupied_columns) / max(width, 1)
+    band_score = (
+        _triangular_score(band_dark_ratio, target=0.22, tolerance=0.20) * 0.55
+        + _triangular_score(column_occupancy, target=0.55, tolerance=0.45) * 0.45
+    )
+
+    central_x0, central_x1 = int(width * 0.10), max(int(width * 0.90), int(width * 0.10) + 1)
+    central_crop = gray[y0:y1, central_x0:central_x1]
+    edges = cv2.Canny(central_crop, 50, 150)
+    edge_density = float(np.count_nonzero(edges)) / max(float(edges.size), 1.0)
+    edge_density_score = _triangular_score(edge_density, target=0.08, tolerance=0.08)
+
+    return {
+        "darkOnLightContrast": min(1.0, dark_on_light_score),
+        "componentDensity": min(1.0, component_density_score),
+        "horizontalDigitBandOccupancy": min(1.0, band_score),
+        "centralEdgeDensity": min(1.0, edge_density_score),
+    }
+
+
+def _triangular_score(value: float, *, target: float, tolerance: float) -> float:
+    return max(0.0, 1.0 - abs(value - target) / max(tolerance, 0.000001))
+
+
+def _preliminary_ocr_confidence(crop: Any) -> float:
+    if importlib.util.find_spec("pytesseract") is None:
+        return 0.0
+    try:
+        result = recognize_bib(crop)
+    except Exception:
+        return 0.0
+    return result.confidence if result is not None else 0.0
 
 
 def _dedupe_overlapping(detections: list[BibDetection], *, iou_threshold: float = 0.45) -> list[BibDetection]:

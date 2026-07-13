@@ -10,23 +10,34 @@
     "dev:web": "vite --host 0.0.0.0",
     "dev:api": "uvicorn api.main:app --host 0.0.0.0 --port 3001 --reload",
     "start:api": "python -m api.start",
+    "start": "uvicorn api.main:app --host 0.0.0.0 --port 3001",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:web": "vite --host 0.0.0.0",
+    "dev:api": "uvicorn api.main:app --host 0.0.0.0 --port 3001 --reload",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "evaluate": "node scripts/evaluate_detection.js"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
     "concurrently": "latest",
     "cors": "latest",
     "express": "latest",
+    "jpeg-js": "^0.4.4",
     "multer": "latest",
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "sharp": "^0.35.3",
+    "tesseract.js": "^7.0.0",
+    "pngjs": "^7.0.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest"
   },
   "devDependencies": {
-    "eslint": "latest",
     "@eslint/js": "latest",
+    "eslint": "latest",
     "globals": "latest"
   }
 }
