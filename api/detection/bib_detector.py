@@ -9,6 +9,7 @@ frontend overlays.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -99,7 +100,10 @@ def detect_bib_regions_from_image(
     mask = _build_bib_candidate_mask(image)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    detections: list[BibDetection] = []
+    # Crop normalization is the most expensive per-contour operation. Score and
+    # de-duplicate candidates first so only the best final regions are warped,
+    # sharpened, and resized for OCR.
+    candidate_regions: list[tuple[Any, tuple[int, int, int, int], float]] = []
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         area = float(w * h)
@@ -114,12 +118,19 @@ def detect_bib_regions_from_image(
         if extent < 0.35:
             continue
 
-        crop = _crop_and_normalize(image, contour, (x, y, w, h))
         confidence = _score_candidate(aspect_ratio=aspect_ratio, extent=extent, area_ratio=area / image_area)
+        candidate_regions.append((contour, (x, y, w, h), confidence))
+
+    candidate_regions.sort(key=lambda item: item[2], reverse=True)
+    deduped_regions = _dedupe_overlapping_regions(candidate_regions)[:max_candidates]
+
+    detections: list[BibDetection] = []
+    for contour, rect, confidence in deduped_regions:
+        x, y, w, h = rect
+        crop = _crop_and_normalize(image, contour, rect)
         detections.append(BibDetection(BoundingBox(x, y, w, h), confidence, crop))
 
-    detections.sort(key=lambda detection: detection.confidence, reverse=True)
-    return _dedupe_overlapping(detections)[:max_candidates]
+    return detections
 
 
 def detections_for_response(detections: Iterable[BibDetection]) -> list[dict[str, Any]]:
@@ -206,6 +217,7 @@ def _order_points(points: Any) -> Any:
     return rect
 
 
+@cache
 def _sharpen_kernel() -> Any:
     np = _require_numpy()
     return np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
@@ -225,6 +237,22 @@ def _dedupe_overlapping(detections: list[BibDetection], *, iou_threshold: float 
     return kept
 
 
+def _dedupe_overlapping_regions(
+    regions: list[tuple[Any, tuple[int, int, int, int], float]],
+    *,
+    iou_threshold: float = 0.45,
+) -> list[tuple[Any, tuple[int, int, int, int], float]]:
+    kept: list[tuple[Any, tuple[int, int, int, int], float]] = []
+    kept_boxes: list[BoundingBox] = []
+    for region in regions:
+        _, rect, _ = region
+        candidate_box = BoundingBox(*rect)
+        if all(_iou(candidate_box, existing_box) < iou_threshold for existing_box in kept_boxes):
+            kept.append(region)
+            kept_boxes.append(candidate_box)
+    return kept
+
+
 def _iou(a: BoundingBox, b: BoundingBox) -> float:
     x_left = max(a.x, b.x)
     y_top = max(a.y, b.y)
@@ -237,6 +265,7 @@ def _iou(a: BoundingBox, b: BoundingBox) -> float:
     return intersection / union if union else 0.0
 
 
+@cache
 def _require_cv2() -> Any:
     try:
         import cv2  # type: ignore[import-not-found]
@@ -245,6 +274,7 @@ def _require_cv2() -> Any:
     return cv2
 
 
+@cache
 def _require_numpy() -> Any:
     try:
         import numpy as np  # type: ignore[import-not-found]
