@@ -1,10 +1,14 @@
 import cors from 'cors';
 import express from 'express';
 import multer from 'multer';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { detectBibNumbers } from './detection/pipeline.js';
 
 const app = express();
 const port = process.env.PORT ?? 3001;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const clientDistPath = path.resolve(__dirname, '..', 'dist');
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 12 * 1024 * 1024 },
@@ -36,11 +40,17 @@ app.post('/api/detect', upload.single('image'), async (request, response, next) 
   }
 });
 
+app.use(express.static(clientDistPath));
+
+app.get(/.*/, (_request, response) => {
+  response.sendFile(path.join(clientDistPath, 'index.html'));
+});
+
 app.use((error, _request, response, _next) => {
   console.error(error);
   response.status(500).send('Unable to process image.');
 });
 
 app.listen(port, () => {
-  console.log(`Number detector API listening on http://localhost:${port}`);
+  console.log(`Number detector listening on http://localhost:${port}`);
 });
