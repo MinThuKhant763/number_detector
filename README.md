@@ -258,3 +258,16 @@ The current backend returns deterministic placeholder detections so the full-sta
 3. Replace `rankDetections` with domain-specific validation or an AI model that resolves ambiguous OCR output.
 
 Keep each integration behind the same function signatures to avoid changing API routes or frontend code.
+
+## FastAPI + YOLO backend
+
+The Python backend exposes the same `POST /api/detect` contract as the original Express prototype, but is designed for model-backed race-bib detection:
+
+```bash
+pip install -r requirements.txt
+uvicorn api.main:app --host 0.0.0.0 --port 3001 --reload
+```
+
+Set `YOLO_BIB_MODEL_PATH=/path/to/bib-detector.pt` to use a fine-tuned YOLO model for bib localization. If no model path is configured, the API falls back to the OpenCV candidate detector in `api/detection/bib_detector.py`.
+
+Detection output is four-digit focused. The API only accepts OCR candidates with exactly four digits. When one or more digits are below the clarity threshold, the response returns `bibNumber: null`, a masked `displayNumber` such as `12?4`, and `digitScores` so the UI can show confidence for each digit instead of pretending the full number is clear.
