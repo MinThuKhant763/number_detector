@@ -25,3 +25,18 @@ def test_region_dedupe_keeps_highest_ranked_regions_without_crops():
     ]
 
     assert _dedupe_overlapping_regions(regions) == [regions[0], regions[2]]
+def test_detection_response_can_include_debug_scores():
+    detection = BibDetection(
+        BoundingBox(x=10, y=20, width=300, height=120),
+        0.87654,
+        crop="ocr-ready",
+        debug_scores={"aspect": 0.9, "darkOnLightContrast": 0.81234},
+    )
+
+    assert detections_for_response([detection], include_debug=True) == [
+        {
+            "bbox": {"x": 10, "y": 20, "width": 300, "height": 120},
+            "confidence": 0.8765,
+            "debugScores": {"aspect": 0.9, "darkOnLightContrast": 0.8123},
+        }
+    ]

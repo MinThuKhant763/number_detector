@@ -85,15 +85,17 @@ The recommended processing pipeline is:
 
 ## Sample images
 
-Store test race images in `samples/images/`. This directory is intentionally kept in the repository with a `.gitkeep` file, but image files are not required for the initial documentation-only setup.
+Approved test assets live in `samples/images/` and their expected bib labels live in `samples/labels.json`. The committed sample set uses synthetic SVG race-photo fixtures so the repository can exercise the evaluation flow without storing identifiable athlete photos. The fixtures cover these categories:
 
-Suggested file naming:
+- `clear_single_runner_bib.svg`: one large, unobstructed bib.
+- `multiple_runners_bibs.svg`: three runners with separate bib numbers.
+- `small_distant_bib.svg`: a low-resolution/distant bib.
+- `partial_occlusion_bib.svg`: a bib partly covered by a runner's arm.
+- `motion_blur_bib.svg`: a horizontally blurred runner and bib.
+- `glare_shadows_bib.svg`: glare and shadow over the bib area.
+- `negative_no_bib.svg`: a negative control with non-bib text and no expected bibs.
 
-- `race_001.jpg`
-- `race_002.jpg`
-- `marathon_finish_001.png`
-
-When adding real race images, make sure you have permission to store and use them. Avoid committing sensitive images unless the repository is private and the images are approved for that use.
+When adding additional real race images, keep the same naming and label conventions, and only commit images that are approved for repository use. Each real image must have documented permission from the photographer or rights holder and, when people are identifiable, consent or another valid basis for using the image in development and evaluation. Avoid public commits of sensitive or personally identifying photos; prefer synthetic, licensed, or private approved data for routine testing.
 
 ## Evaluation label format
 
@@ -111,16 +113,32 @@ Example:
 ```json
 [
   {
-    "image": "race_001.jpg",
+    "image": "clear_single_runner_bib.svg",
+    "category": "clear_single_runner_bib",
+    "description": "Synthetic approved test image with one front-facing runner and a large, unobstructed bib.",
+    "source": "synthetic",
+    "license": "project-approved synthetic test asset",
     "bibs": [
       {
         "bib_number": "1284",
-        "bbox": { "x": 412, "y": 288, "width": 96, "height": 44 }
+        "bbox": { "x": 348, "y": 224, "width": 108, "height": 58 }
       }
     ]
   }
 ]
 ```
+
+Use `bibs: []` for negative controls where no bib should be detected.
+
+## Dataset evaluation
+
+An evaluation runner has not been implemented yet, but it should consume `samples/labels.json`, load each referenced image from `samples/images/`, run the detection pipeline, and compare predicted bib numbers with the expected `bibs` entries. Once the evaluator exists, run it with:
+
+```bash
+npm run evaluate
+```
+
+Recommended evaluation outputs include exact bib-number accuracy, false positives on negative controls, false negatives, and bounding-box overlap metrics for labels that include `bbox` values.
 
 ## Known limitations
 
@@ -288,6 +306,10 @@ Or use Compose:
 
 ```bash
 docker compose -f docker-compose.api.yml up --build
+```
+
+docker run --rm -p 3001:3001 number-detector-api
+curl http://localhost:3001/api/health
 ```
 
 Cloud platforms should run the API with:

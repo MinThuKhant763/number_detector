@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
 opencv-python-headless
+opencv-python
 numpy
 pytesseract
 ultralytics

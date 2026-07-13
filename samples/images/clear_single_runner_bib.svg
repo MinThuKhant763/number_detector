@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520" role="img" aria-label="Synthetic race photo: one runner with clear bib 1284">
+  <rect width="800" height="520" fill="#d9ecff"/>
+  <rect y="390" width="800" height="130" fill="#7ab36a"/>
+  <path d="M0 412 C130 386 260 424 390 397 S650 412 800 388 L800 520 L0 520 Z" fill="#6a6a6a" opacity="0.85"/>
+  <circle cx="402" cy="112" r="38" fill="#8d5524"/>
+  <path d="M382 93 C399 70 432 80 438 105 C425 96 405 98 382 93" fill="#2b1b12"/>
+  <rect x="349" y="153" width="106" height="150" rx="28" fill="#e24b40"/>
+  <rect x="330" y="175" width="34" height="124" rx="16" fill="#8d5524" transform="rotate(18 347 237)"/>
+  <rect x="440" y="174" width="34" height="128" rx="16" fill="#8d5524" transform="rotate(-18 457 238)"/>
+  <rect x="348" y="224" width="108" height="58" rx="6" fill="#fffef5" stroke="#111" stroke-width="3"/>
+  <text x="402" y="267" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="#111">1284</text>
+  <rect x="362" y="301" width="30" height="136" rx="14" fill="#222a54" transform="rotate(10 377 369)"/>
+  <rect x="415" y="301" width="30" height="136" rx="14" fill="#222a54" transform="rotate(-10 430 369)"/>
+</svg>
