@@ -10,8 +10,20 @@ function normalizeBoundingBox(detection) {
   return detection.boundingBox ?? detection.bbox ?? detection.box ?? { x: 0, y: 0, width: 0, height: 0 };
 }
 
-export function normalizeDetection(detection, index = 0) {
-  const bibNumber = detection.bibNumber ?? detection.bib_number ?? detection.number ?? '';
+function toPercentBox(box, image) {
+  if (!image?.width || !image?.height) return box;
+
+  return {
+    x: (box.x / image.width) * 100,
+    y: (box.y / image.height) * 100,
+    width: (box.width / image.width) * 100,
+    height: (box.height / image.height) * 100,
+  };
+}
+
+export function normalizeDetection(detection, index = 0, image = null) {
+  const bibNumber = detection.bibNumber ?? detection.bib_number ?? detection.number ?? detection.displayNumber ?? '';
+  const pixelBoundingBox = normalizeBoundingBox(detection);
 
   return {
     ...detection,
@@ -19,14 +31,18 @@ export function normalizeDetection(detection, index = 0) {
     bibNumber: String(bibNumber),
     ocrConfidence: detection.ocrConfidence ?? detection.ocr_confidence ?? detection.confidence ?? 0,
     aiConfidence: detection.aiConfidence ?? detection.ai_confidence ?? null,
-    boundingBox: normalizeBoundingBox(detection),
+    pixelBoundingBox,
+    boundingBox: toPercentBox(pixelBoundingBox, image),
   };
 }
 
 export function normalizeDetectionResponse(payload) {
+  const image = payload.image ?? payload.imageSize ?? null;
+
   return {
     ...payload,
-    detections: (payload.detections ?? []).map(normalizeDetection),
+    image,
+    detections: (payload.detections ?? []).map((detection, index) => normalizeDetection(detection, index, image)),
   };
 }
 

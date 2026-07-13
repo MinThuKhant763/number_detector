@@ -36,7 +36,11 @@ async def detect(image: Annotated[UploadFile, File(...)]) -> dict[str, object]:
     if decoded is None:
         raise HTTPException(status_code=400, detail="Unable to decode image.")
 
-    return {"detections": detect_four_digit_bibs(decoded)}
+    height, width = decoded.shape[:2]
+    return {
+        "image": {"filename": image.filename, "width": width, "height": height},
+        "detections": detect_four_digit_bibs(decoded),
+    }
 
 
 def _require_cv2():

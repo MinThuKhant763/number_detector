@@ -68,7 +68,25 @@ test('production detection preserves backend bib numbers, confidences, and bound
       bibNumber: '9087',
       ocrConfidence: 0.873,
       aiConfidence: 0.931,
+      pixelBoundingBox: { x: 12, y: 34, width: 21, height: 9 },
       boundingBox: { x: 12, y: 34, width: 21, height: 9 },
     },
   ]);
+});
+
+test('production detection converts backend pixel boxes to frontend overlay percentages when image size is present', () => {
+  const payload = normalizeDetectionResponse({
+    image: { width: 800, height: 400 },
+    detections: [
+      {
+        id: 'backend-1',
+        bibNumber: '1284',
+        confidence: 0.91,
+        boundingBox: { x: 200, y: 100, width: 160, height: 80 },
+      },
+    ],
+  });
+
+  assert.deepEqual(payload.detections[0].pixelBoundingBox, { x: 200, y: 100, width: 160, height: 80 });
+  assert.deepEqual(payload.detections[0].boundingBox, { x: 25, y: 25, width: 20, height: 20 });
 });
